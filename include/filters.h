@@ -10,7 +10,8 @@ protected:
     std::vector<float> m_kernel;
     size_t m_k_width;
     size_t m_k_height;
-    size_t m_k_center_idx;
+    size_t m_k_center_x;
+    size_t m_k_center_y;
 
     virtual void build_kernel() = 0;
 private:

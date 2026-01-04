@@ -24,11 +24,11 @@ TEST(Operations, BrightnessAndContrast){
 }
 
 TEST(Filters, Gaussian){
-    std::string test_ppm_path {"/home/harunie/Documents/imaging/images/ppm/stop_p6.ppm"};
+    std::string test_ppm_path {"/home/harunie/Documents/imaging/images/ppm/tree_p6.ppm"};
     Image stop;
     PPMLoader ppm;
     ASSERT_EQ(ppm.load(test_ppm_path, &stop), IMGError::SUCCESS);
-    GaussianBlur blur(1.0, 3);
+    GaussianBlur blur(2, 7);
     Image blur_stop = blur.apply(&stop);
     Display::term(&blur_stop);
 }
