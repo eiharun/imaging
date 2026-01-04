@@ -1,5 +1,6 @@
 add_executable(unit_tests 
     ut_image.cpp    
+    ut_operations.cpp    
 )
 
 target_link_libraries(unit_tests PRIVATE

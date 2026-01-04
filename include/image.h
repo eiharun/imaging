@@ -20,15 +20,12 @@ public:
     virtual IMGError save(const Image* img, std::string filename) = 0;
     virtual IMGError load(std::string filename, Image* img) = 0;
 protected:
-    size_t m_h;
-    size_t m_w;
-    std::vector<float> m_data;
-    bool m_is_open{false};
+    bool read_token(std::ifstream* in, std::string& out);
 };
 
 /* PPM */
 
-enum class PPMMode {P1=0, P2, P3, P4, P5, P6};
+enum class PPMMode : short {P1=0x01, P2, P3, P4, P5, P6};
 
 class PPMLoader : public ImageLoader {
 // https://netpbm.sourceforge.net/doc/ppm.html
@@ -37,35 +34,17 @@ public:
     IMGError save(const Image* img, std::string filename, PPMMode mode);
     IMGError load(std::string filename, Image* img) override;
 private:
+    IMGError load_p6(std::ifstream* file, Image* img);
     size_t m_max_val;
-    const int m_channels = 3;
-};
-
-class PGMLoader : public ImageLoader {
-// https://netpbm.sourceforge.net/doc/pgm.html
-public:
-    IMGError save(const Image* img, std::string filename) override;
-    IMGError save(std::string filename, PPMMode mode);
-    IMGError load(std::string filename, Image* img) override;
-private:
-    size_t m_max_val;
-    const int m_channels = 1;
-};
-
-class PBMLoader : public ImageLoader {
-// https://netpbm.sourceforge.net/doc/pbm.html
-public:
-    IMGError save(const Image* img, std::string filename) override;
-    IMGError save(std::string filename, PPMMode mode);
-    IMGError load(std::string filename, Image* img) override;
-private:
-    size_t m_max_val;
-    const int m_channels = 1;
 };
 
 /* BMP */
 class BMPLoader : public ImageLoader {
 public:
 private:
+};
 
+class Display{
+public:
+    static void term(const Image* img);
 };

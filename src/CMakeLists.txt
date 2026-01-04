@@ -1,6 +1,8 @@
 
 set(CORE_SOURCES
     image.cpp
+    operations.cpp
+    filters.cpp
 )
 
 add_executable(main main.cpp)
