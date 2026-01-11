@@ -8,7 +8,11 @@ target_link_libraries(unit_tests PRIVATE
     GTest::gtest
     GTest::gtest_main
 )
-
+target_link_libraries(unit_tests PRIVATE 
+    Qt6::Core 
+    Qt6::Gui 
+    Qt6::Widgets
+)
 
 target_include_directories(unit_tests PUBLIC ${CMAKE_SOURCE_DIR}/include)
 

@@ -2,11 +2,11 @@
 #include <image.h>
 #include <operations.h>
 
+class ConvolutionOperation : public Operation {
+  public:
+    Image apply(const Image *img) override;
 
-class ConvolutionOperation : public Operation{
-public:
-    Image apply(const Image* img) override;
-protected:
+  protected:
     std::vector<float> m_kernel;
     size_t m_k_width;
     size_t m_k_height;
@@ -14,17 +14,35 @@ protected:
     size_t m_k_center_y;
 
     virtual void build_kernel() = 0;
-private:
-    Image convolve(const Image* img);
+
+  private:
+    Image convolve(const Image *img);
 };
 
-class GaussianBlur : public ConvolutionOperation{
-public:
+class GaussianBlur : public ConvolutionOperation {
+  public:
     explicit GaussianBlur(float sigma, int width);
-protected:
+
+  protected:
     void build_kernel() override;
-private:
+
+  private:
     float m_sigma;
     int m_width;
+};
 
+class Edge : public ConvolutionOperation {
+  public:
+  protected:
+    void build_kernel() override;
+
+  private:
+};
+
+class CustomConv : public ConvolutionOperation {
+  public:
+      CustomConv(const std::vector<float>& cust_kernel, int width, int height);
+  protected:
+      void build_kernel() override;
+  private:
 };
