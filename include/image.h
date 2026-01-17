@@ -51,7 +51,7 @@ class BMPLoader : public ImageLoader {
         uint32_t file_size;
         uint32_t reserved;
         uint32_t data_offset;
-    }__attribute__((packed));
+    } __attribute__((packed));
     struct BMPInfoHeader {
         uint32_t size;
         uint32_t width;
@@ -64,7 +64,15 @@ class BMPLoader : public ImageLoader {
         uint32_t y_pxl_p_m;
         uint32_t color_used;
         uint32_t important_colors;
-    }__attribute__((packed));
+    } __attribute__((packed));
+};
+
+class PNGLoader : public ImageLoader {
+  public:
+    IMGError save(const Image *img, std::string filename) override;
+    IMGError load(std::string filename, Image *img) override;
+
+  private:
 };
 
 #include <QApplication>
@@ -72,6 +80,7 @@ class BMPLoader : public ImageLoader {
 #include <QImage>
 #include <QLabel>
 #include <QPixmap>
+#include <QScreen>
 #include <QVBoxLayout>
 
 class ImgDisplay {

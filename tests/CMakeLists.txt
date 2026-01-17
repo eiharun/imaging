@@ -15,5 +15,4 @@ target_link_libraries(unit_tests PRIVATE
 )
 
 target_include_directories(unit_tests PUBLIC ${CMAKE_SOURCE_DIR}/include)
-
 gtest_discover_tests(unit_tests)

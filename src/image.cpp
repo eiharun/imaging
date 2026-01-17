@@ -1,3 +1,5 @@
+#include <iterator>
+#define STB_IMAGE_IMPLEMENTATION
 #include <algorithm>
 #include <cctype>
 #include <cmath>
@@ -5,6 +7,7 @@
 #include <image.h>
 #include <iostream>
 #include <limits>
+#include <stb_image.h>
 
 bool ImageLoader::read_token(std::ifstream *in, std::string &out) {
     out.clear();
@@ -116,14 +119,16 @@ IMGError PPMLoader::load_p6(std::ifstream *file, Image *img) {
         img->bitdepth = 16;
         for (size_t _{}; _ < img->width * img->height * img->channels; _++) {
             file->read(reinterpret_cast<char *>(&val), sizeof(val));
-            img->data[i++] = static_cast<float>(val) / ((1u << img->bitdepth) - 1u);
+            img->data[i++] =
+                static_cast<float>(val) / ((1u << img->bitdepth) - 1u);
         }
     } else {
         unsigned char val;
         img->bitdepth = 8;
         for (size_t _{}; _ < img->width * img->height * img->channels; _++) {
             file->read(reinterpret_cast<char *>(&val), sizeof(val));
-            img->data[i++] = static_cast<float>(val) / ((1u << img->bitdepth) - 1u);
+            img->data[i++] =
+                static_cast<float>(val) / ((1u << img->bitdepth) - 1u);
         }
     }
 
@@ -187,6 +192,31 @@ IMGError BMPLoader::load(std::string filename, Image *img) {
     return IMGError::SUCCESS;
 }
 
+IMGError PNGLoader::save(const Image *img, std::string filename) {
+    return IMGError::SUCCESS;
+}
+
+IMGError PNGLoader::load(std::string filename, Image *img) {
+    int width, height, channels;
+    unsigned char *raw_data =
+        stbi_load(filename.c_str(), &width, &height, &channels, 0);// No support for 4 chan alpha yet
+    if (!raw_data) {
+        return IMGError::UNKNOWNERROR;
+    }
+    img->bitdepth = 8; // Only support 8-bit png so far
+    img->width = width;
+    img->height = height;
+    img->channels = channels;
+    img->data.reserve(width * height * channels);
+    std::transform(raw_data, raw_data + (width * height * channels),
+                   std::back_inserter(img->data), [img](unsigned char element) {
+                       return static_cast<float>(element) /
+                              ((1u << img->bitdepth) - 1u);
+                   });
+    stbi_image_free(raw_data);
+    return IMGError::SUCCESS;
+}
+
 void ImgDisplay::term(const Image *img) {
     std::cout << "Warning, in BETA\n";
     auto to_u8 = [](float v) {
@@ -215,11 +245,25 @@ void ImgDisplay::initQtApp() {
     // Only create app if it doesn't already exist
     if (QApplication::instance() == nullptr) {
         static int argc = 1;
-        static char *argv[] = {(char *)"ImageDisplayApp", nullptr};
+        static char *argv[] = {(char *)"Floating", nullptr};
         // Static instance persists for the program lifetime
         static QApplication app(argc, argv);
+        app.setApplicationName("Floating");
     }
 }
+
+struct ResizeFilter : QObject {
+    QLabel *label;
+    QPixmap pix;
+
+    bool eventFilter(QObject *obj, QEvent *ev) override {
+        if (ev->type() == QEvent::Resize) {
+            label->setPixmap(pix.scaled(label->size(), Qt::KeepAspectRatio,
+                                        Qt::SmoothTransformation));
+        }
+        return false;
+    }
+};
 
 void ImgDisplay::qt(const Image *img) {
     initQtApp();
@@ -252,17 +296,40 @@ void ImgDisplay::qt(const Image *img) {
                  format);
     QDialog dialog;
     dialog.setWindowTitle(QString("Preview"));
+    // dialog.setWindowFlags(dialog.windowFlags() | Qt::Window);
+    const int maxW = 900;
+    const int maxH = 700;
+    dialog.resize(std::min(image.width(), maxW),
+                  std::min(image.height(), maxH));
+
+    QScreen *s = dialog.screen();
+    QRect g = s->availableGeometry();
+
+    dialog.setMinimumSize(200, 200);
+    dialog.setMaximumSize(g.size());
+    dialog.setBaseSize(dialog.size());
+    dialog.setSizeIncrement(1, 1);
+
     QVBoxLayout *layout = new QVBoxLayout(&dialog);
     layout->setContentsMargins(0, 0, 0, 0);
-    layout->setSpacing(0);
+    // layout->setSpacing(0);
 
     QLabel *label = new QLabel(nullptr);
-    // label->setAttribute(Qt::WA_DeleteOnClose);
-    label->setPixmap(QPixmap::fromImage(image));
     label->setAlignment(Qt::AlignCenter);
-    // label->show();
+    label->setSizePolicy(QSizePolicy::Ignored, QSizePolicy::Ignored);
+    label->setMinimumSize(1, 1);
+
+    QPixmap original = QPixmap::fromImage(image);
+    label->setPixmap(original);
+
     layout->addWidget(label);
-    dialog.setFixedSize(image.size());
+    // dialog.setFixedSize(image.size());
+
+    ResizeFilter *rf = new ResizeFilter;
+    rf->label = label;
+    rf->pix = original;
+    dialog.installEventFilter(rf);
+    rf->setParent(&dialog);
 
     dialog.exec();
 }

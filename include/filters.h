@@ -17,6 +17,7 @@ class ConvolutionOperation : public Operation {
 
   private:
     Image convolve(const Image *img);
+    Image convolve_raw(const Image *img);
 };
 
 class GaussianBlur : public ConvolutionOperation {

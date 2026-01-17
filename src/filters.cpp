@@ -1,15 +1,109 @@
 #include <algorithm>
 #include <cassert>
 #include <filters.h>
+#include <ratio>
 #define _USE_MATH_DEFINES
 #include <cmath>
+#include <iostream>
+#include <chrono>
+extern "C"{
+#include <fftw3.h>
+}
 
 Image ConvolutionOperation::apply(const Image *img) {
     build_kernel();
-    return convolve(img);
+    return convolve(img); // Revert to convolve() after fft is done
+}
+
+inline int next_pow2(int n) {
+    if (n <= 0)
+        return 1;
+    n--;
+    n |= n >> 1;
+    n |= n >> 2;
+    n |= n >> 4;
+    n |= n >> 8;
+    n |= n >> 16;
+    return n + 1;
 }
 
 Image ConvolutionOperation::convolve(const Image *img) {
+#ifdef D_TIME
+    std::cout << "Using FFT convolve\n";
+    // Implement fftw3 here
+    auto start = std::chrono::high_resolution_clock::now();
+#endif
+    if(img->channels != 1){
+        std::cerr << "Only support for 1 channel so far\n";
+    }
+    int f_w = next_pow2(img->width + m_k_width - 1);
+    int f_h = next_pow2(img->height + m_k_height - 1);
+
+    fftwf_complex *A = fftwf_alloc_complex(f_h * f_w);
+    fftwf_complex *B = fftwf_alloc_complex(f_h * f_w);
+    fftwf_complex *C = fftwf_alloc_complex(f_h * f_w);
+    std::vector<float> Ar(f_w*f_h);
+    std::vector<float> Br(f_w*f_h);
+    std::vector<float> Cr(f_w*f_h);
+    memset(A, 0, f_w * f_h * sizeof(fftwf_complex));
+    memset(B, 0, f_w * f_h * sizeof(fftwf_complex));
+
+    for (size_t y{}; y < img->height; ++y) {
+        for (size_t x{}; x < img->width; ++x) {
+            Ar[y * f_w + x] = img->data[y * img->width + x];
+        }
+    }
+
+    for (int y = 0; y < m_k_height; y++)
+        for (int x = 0; x < m_k_width; x++) {
+            int sx = (x - m_k_width / 2 + f_w) % f_w;
+            int sy = (y - m_k_height / 2 + f_h) % f_h;
+            Br[sy * f_w + sx] = m_kernel[y * m_k_width + x];
+        }
+
+    auto pA = fftwf_plan_dft_r2c_2d(f_h, f_w, Ar.data(), A, FFTW_ESTIMATE);
+    auto pB = fftwf_plan_dft_r2c_2d(f_h, f_w, Br.data(), B, FFTW_ESTIMATE);
+    auto pC = fftwf_plan_dft_c2r_2d(f_h, f_w, C, Cr.data(), FFTW_ESTIMATE);
+
+    fftwf_execute(pA);
+    fftwf_execute(pB);
+
+    for (int i = 0; i < f_w * f_h; i++) {
+        float ar = A[i][0], ai = A[i][1];
+        float br = B[i][0], bi = B[i][1];
+        C[i][0] = ar * br - ai * bi;
+        C[i][1] = ar * bi + ai * br;
+    }
+    fftwf_execute(pC);
+    float s = 1.0f / (f_w * f_h);
+    Image out;
+    out.width = img->width;
+    out.height = img->height;
+    out.channels = img->channels;
+    out.bitdepth = img->bitdepth;
+    out.data.resize(img->width * img->height);
+    for (int y = 0; y < img->height; y++)
+        for (int x = 0; x < img->width; x++)
+            out.data[y * img->width + x] = Cr[y * f_w + x] * s;
+    fftwf_destroy_plan(pA);
+    fftwf_destroy_plan(pB);
+    fftwf_destroy_plan(pC);
+    fftwf_free(A);
+    fftwf_free(B);
+    fftwf_free(C);
+#ifdef D_TIME
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> duration = end - start;
+    std::cout << "FFT Conv took: " << duration.count() << " ms\n";
+#endif
+    return out;
+}
+
+Image ConvolutionOperation::convolve_raw(const Image *img) {
+#ifdef D_TIME
+    std::cout << "Using convolve raw\n";
+    auto start = std::chrono::high_resolution_clock::now();
+#endif
     Image result;
     int w_padding = (m_k_width - 1) / 2;
     int h_padding = (m_k_height - 1) / 2;
@@ -45,6 +139,12 @@ Image ConvolutionOperation::convolve(const Image *img) {
         }
     }
 
+#ifdef D_TIME
+    auto end = std::chrono::high_resolution_clock::now();
+    std::chrono::duration<double, std::milli> duration = end - start;
+    std::cout << "ConvRaw took: " << duration.count() << " ms\n";
+#endif
+    
     return result;
 }
 
@@ -97,12 +197,13 @@ void Edge::build_kernel() {
     m_kernel[7] = 1.0f;
 }
 
-CustomConv::CustomConv(const std::vector<float>& cust_kernel, int width, int height){
+CustomConv::CustomConv(const std::vector<float> &cust_kernel, int width,
+                       int height) {
     m_k_width = width;
     m_k_height = height;
-    m_k_center_x = m_k_width/2;
-    m_k_center_y = m_k_height/2;
+    m_k_center_x = m_k_width / 2;
+    m_k_center_y = m_k_height / 2;
     m_kernel = cust_kernel;
 }
 
-void CustomConv::build_kernel(){} //empty
+void CustomConv::build_kernel() {} // empty
