@@ -3,6 +3,8 @@
 #include <string>
 #include <vector>
 
+enum class StorageType { INTERLEAVED = 0, PLANAR };
+
 struct Image {
     // PPM BMP etc become adapters for the Image
     uint32_t width;
@@ -10,9 +12,15 @@ struct Image {
     uint32_t channels;
     uint32_t bitdepth;
     std::vector<float> data; // normalized
+    StorageType type;
 };
 
 enum class IMGError { SUCCESS = 0, FILENOTFOUND, BADFORMAT, UNKNOWNERROR };
+
+class ImageConverter {
+    static IMGError i2p(Image *src, Image *dst);
+    static IMGError p2i(Image *src, Image *dst);
+};
 
 class ImageLoader {
   public:

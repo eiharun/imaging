@@ -9,9 +9,9 @@ TEST(Operations, Greyscale) {
     Image stop;
     PPMLoader ppm;
     ASSERT_EQ(ppm.load(test_ppm_path, &stop), IMGError::SUCCESS);
-    // ImgDisplay::term(&stop);
+    // ImgDisplay::qt(&stop);
     Image stop_grey = GreyscaleOp::op(&stop);
-    ImgDisplay::term(&stop_grey);
+    ImgDisplay::qt(&stop_grey);
 }
 
 TEST(Operations, BrightnessAndContrast) {
@@ -20,9 +20,9 @@ TEST(Operations, BrightnessAndContrast) {
     Image stop;
     PPMLoader ppm;
     ASSERT_EQ(ppm.load(test_ppm_path, &stop), IMGError::SUCCESS);
-    // ImgDisplay::term(&stop);
+    // ImgDisplay::qt(&stop);
     Image stop_lum = LumaOp::op(&stop, -0.7, 1.3);
-    ImgDisplay::term(&stop_lum);
+    ImgDisplay::qt(&stop_lum);
 }
 
 TEST(Filters, Gaussian) {

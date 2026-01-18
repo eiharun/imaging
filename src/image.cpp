@@ -71,6 +71,7 @@ IMGError PPMLoader::load(std::string filename, Image *img) {
         return IMGError::BADFORMAT;
     }
     PPMMode mode = static_cast<PPMMode>(magicNumber - 0x5030);
+    img->type = StorageType::INTERLEAVED;
     // TODO handle P3 vs P6
     // handle magic number interp
     switch (mode) {
@@ -160,7 +161,7 @@ IMGError BMPLoader::load(std::string filename, Image *img) {
         std::cerr << "Bit count not supported\n";
         return IMGError::BADFORMAT;
     }
-
+    img->type = StorageType::INTERLEAVED;
     img->width = header_info.width;
     img->height = static_cast<uint32_t>(std::abs(header_info.height));
     img->bitdepth = 8;
@@ -203,6 +204,7 @@ IMGError PNGLoader::load(std::string filename, Image *img) {
     if (!raw_data) {
         return IMGError::UNKNOWNERROR;
     }
+    img->type = StorageType::INTERLEAVED;
     img->bitdepth = 8; // Only support 8-bit png so far
     img->width = width;
     img->height = height;

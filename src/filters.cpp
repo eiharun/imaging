@@ -1,12 +1,13 @@
+#include "image.h"
 #include <algorithm>
 #include <cassert>
 #include <filters.h>
 #include <ratio>
 #define _USE_MATH_DEFINES
+#include <chrono>
 #include <cmath>
 #include <iostream>
-#include <chrono>
-extern "C"{
+extern "C" {
 #include <fftw3.h>
 }
 
@@ -27,43 +28,24 @@ inline int next_pow2(int n) {
     return n + 1;
 }
 
-Image ConvolutionOperation::convolve(const Image *img) {
-#ifdef D_TIME
-    std::cout << "Using FFT convolve\n";
-    // Implement fftw3 here
-    auto start = std::chrono::high_resolution_clock::now();
-#endif
-    if(img->channels != 1){
-        std::cerr << "Only support for 1 channel so far\n";
-    }
-    int f_w = next_pow2(img->width + m_k_width - 1);
-    int f_h = next_pow2(img->height + m_k_height - 1);
+void ConvolutionOperation::conv_plane(const float *src, float *dst,
+                                      size_t width, size_t height) {
 
-    fftwf_complex *A = fftwf_alloc_complex(f_h * f_w);
-    fftwf_complex *B = fftwf_alloc_complex(f_h * f_w);
-    fftwf_complex *C = fftwf_alloc_complex(f_h * f_w);
-    std::vector<float> Ar(f_w*f_h);
-    std::vector<float> Br(f_w*f_h);
-    std::vector<float> Cr(f_w*f_h);
-    memset(A, 0, f_w * f_h * sizeof(fftwf_complex));
-    memset(B, 0, f_w * f_h * sizeof(fftwf_complex));
-
-    for (size_t y{}; y < img->height; ++y) {
-        for (size_t x{}; x < img->width; ++x) {
-            Ar[y * f_w + x] = img->data[y * img->width + x];
+    int f_w = next_pow2(width + m_k_width - 1);
+    int f_h = next_pow2(height + m_k_height - 1);
+    // Pad data
+    for (size_t y{}; y < height; ++y) {
+        for (size_t x{}; x < width; ++x) {
+            Ap[y * f_w + x] = src[y * width + x];
         }
     }
-
+    // Pad kernel
     for (int y = 0; y < m_k_height; y++)
         for (int x = 0; x < m_k_width; x++) {
             int sx = (x - m_k_width / 2 + f_w) % f_w;
             int sy = (y - m_k_height / 2 + f_h) % f_h;
-            Br[sy * f_w + sx] = m_kernel[y * m_k_width + x];
+            Bp[sy * f_w + sx] = m_kernel[y * m_k_width + x];
         }
-
-    auto pA = fftwf_plan_dft_r2c_2d(f_h, f_w, Ar.data(), A, FFTW_ESTIMATE);
-    auto pB = fftwf_plan_dft_r2c_2d(f_h, f_w, Br.data(), B, FFTW_ESTIMATE);
-    auto pC = fftwf_plan_dft_c2r_2d(f_h, f_w, C, Cr.data(), FFTW_ESTIMATE);
 
     fftwf_execute(pA);
     fftwf_execute(pB);
@@ -76,15 +58,58 @@ Image ConvolutionOperation::convolve(const Image *img) {
     }
     fftwf_execute(pC);
     float s = 1.0f / (f_w * f_h);
+    for (int y = 0; y < height; y++)
+        for (int x = 0; x < width; x++)
+            dst[y * width + x] = Cp[y * f_w + x] * s;
+}
+
+Image ConvolutionOperation::convolve(const Image *img) {
+#ifdef D_TIME
+    auto start = std::chrono::high_resolution_clock::now();
+#endif
     Image out;
+    if (img->type == StorageType::INTERLEAVED && img->channels != 1) {
+        out = convolve_raw(img);
+#ifdef D_TIME
+        auto end = std::chrono::high_resolution_clock::now();
+        std::chrono::duration<double, std::milli> duration = end - start;
+        std::cout << "Conv took: " << duration.count() << " ms\n";
+#endif
+        return out;
+    }
+
     out.width = img->width;
     out.height = img->height;
     out.channels = img->channels;
+    out.type = img->type;
     out.bitdepth = img->bitdepth;
-    out.data.resize(img->width * img->height);
-    for (int y = 0; y < img->height; y++)
-        for (int x = 0; x < img->width; x++)
-            out.data[y * img->width + x] = Cr[y * f_w + x] * s;
+    int f_w = next_pow2(img->width + m_k_width - 1);
+    int f_h = next_pow2(img->height + m_k_height - 1);
+
+    A = fftwf_alloc_complex(f_h * f_w);
+    B = fftwf_alloc_complex(f_h * f_w);
+    C = fftwf_alloc_complex(f_h * f_w);
+    Ap.resize(f_w * f_h);
+    Bp.resize(f_w * f_h);
+    Cp.resize(f_w * f_h);
+    memset(A, 0, f_w * f_h * sizeof(fftwf_complex));
+    memset(B, 0, f_w * f_h * sizeof(fftwf_complex));
+
+    pA = fftwf_plan_dft_r2c_2d(f_h, f_w, Ap.data(), A, FFTW_ESTIMATE);
+    pB = fftwf_plan_dft_r2c_2d(f_h, f_w, Bp.data(), B, FFTW_ESTIMATE);
+    pC = fftwf_plan_dft_c2r_2d(f_h, f_w, C, Cp.data(), FFTW_ESTIMATE);
+
+    out.data.resize(img->width * img->height * img->channels);
+    if (img->channels == 1) {
+        conv_plane(img->data.data(), out.data.data(), img->width, img->height);
+    } else {
+        for (int c{}; c < img->channels; ++c) {
+            const float *src_c =
+                img->data.data() + (c * (img->width * img->height));
+            float *dst_c = out.data.data() + (c * (img->width * img->height));
+            conv_plane(src_c, dst_c, img->width, img->height);
+        }
+    }
     fftwf_destroy_plan(pA);
     fftwf_destroy_plan(pB);
     fftwf_destroy_plan(pC);
@@ -94,16 +119,12 @@ Image ConvolutionOperation::convolve(const Image *img) {
 #ifdef D_TIME
     auto end = std::chrono::high_resolution_clock::now();
     std::chrono::duration<double, std::milli> duration = end - start;
-    std::cout << "FFT Conv took: " << duration.count() << " ms\n";
+    std::cout << "Conv took: " << duration.count() << " ms\n";
 #endif
     return out;
 }
 
 Image ConvolutionOperation::convolve_raw(const Image *img) {
-#ifdef D_TIME
-    std::cout << "Using convolve raw\n";
-    auto start = std::chrono::high_resolution_clock::now();
-#endif
     Image result;
     int w_padding = (m_k_width - 1) / 2;
     int h_padding = (m_k_height - 1) / 2;
@@ -139,12 +160,6 @@ Image ConvolutionOperation::convolve_raw(const Image *img) {
         }
     }
 
-#ifdef D_TIME
-    auto end = std::chrono::high_resolution_clock::now();
-    std::chrono::duration<double, std::milli> duration = end - start;
-    std::cout << "ConvRaw took: " << duration.count() << " ms\n";
-#endif
-    
     return result;
 }
 

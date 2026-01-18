@@ -6,7 +6,7 @@ TEST(Image, TestP6){
     Image tree;
     PPMLoader ppm;
     ASSERT_EQ(ppm.load(test_ppm_path, &tree), IMGError::SUCCESS);
-    ImgDisplay::term(&tree);
+    ImgDisplay::qt(&tree);
 }
 
 TEST(Image, TestBMP){

@@ -1,6 +1,7 @@
 #pragma once
 #include <image.h>
 #include <operations.h>
+#include <fftw3.h>
 
 class ConvolutionOperation : public Operation {
   public:
@@ -15,8 +16,22 @@ class ConvolutionOperation : public Operation {
 
     virtual void build_kernel() = 0;
 
+    //FFT Params
+    fftwf_complex *A;
+    fftwf_complex *B;
+    fftwf_complex *C;
+
+    std::vector<float> Ap;
+    std::vector<float> Bp;
+    std::vector<float> Cp;
+
+    fftwf_plan pA;
+    fftwf_plan pB;
+    fftwf_plan pC;
   private:
     Image convolve(const Image *img);
+    void conv_plane(const float* src, float* dst, size_t width, size_t height);
+    void conv_intrl(const float* src, float* dst, size_t width, size_t height);
     Image convolve_raw(const Image *img);
 };
 
