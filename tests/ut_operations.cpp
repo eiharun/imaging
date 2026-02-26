@@ -5,52 +5,58 @@
 
 TEST(Operations, Greyscale) {
     std::string test_ppm_path{
-        "/home/harunie/Documents/imaging/images/ppm/stop_p6.ppm"};
+        TEST_DATA_DIR "/ppm/stop_p6.ppm"};
     Image stop;
     PPMLoader ppm;
     ASSERT_EQ(ppm.load(test_ppm_path, &stop), IMGError::SUCCESS);
-    // ImgDisplay::qt(&stop);
     Image stop_grey = GreyscaleOp::op(&stop);
+#ifndef HEADLESS_TESTS
     ImgDisplay::qt(&stop_grey);
+#endif
 }
 
 TEST(Operations, BrightnessAndContrast) {
     std::string test_ppm_path{
-        "/home/harunie/Documents/imaging/images/ppm/stop_p6.ppm"};
+        TEST_DATA_DIR "/ppm/stop_p6.ppm"};
     Image stop;
     PPMLoader ppm;
     ASSERT_EQ(ppm.load(test_ppm_path, &stop), IMGError::SUCCESS);
-    // ImgDisplay::qt(&stop);
     Image stop_lum = LumaOp::op(&stop, -0.7, 1.3);
+#ifndef HEADLESS_TESTS
     ImgDisplay::qt(&stop_lum);
+#endif
 }
 
 TEST(Filters, Gaussian) {
     std::string test_ppm_path{
-        "/home/harunie/Documents/imaging/images/ppm/stop_p6.ppm"};
+        TEST_DATA_DIR "/ppm/stop_p6.ppm"};
     Image stop;
     PPMLoader ppm;
     ASSERT_EQ(ppm.load(test_ppm_path, &stop), IMGError::SUCCESS);
     GaussianBlur blur(2, 7);
     Image blur_stop = blur.apply(&stop);
+#ifndef HEADLESS_TESTS
     ImgDisplay::qt(&blur_stop);
+#endif
 }
 
 TEST(Filters, Edge) {
     std::string test_ppm_path{
-        "/home/harunie/Documents/imaging/images/ppm/stop_p6.ppm"};
+        TEST_DATA_DIR "/ppm/stop_p6.ppm"};
     Image stop;
     PPMLoader ppm;
     ASSERT_EQ(ppm.load(test_ppm_path, &stop), IMGError::SUCCESS);
     Image stop_grey = GreyscaleOp::op(&stop);
     Edge edge;
     Image edge_stop = edge.apply(&stop_grey);
+#ifndef HEADLESS_TESTS
     ImgDisplay::qt(&edge_stop);
+#endif
 }
 
 TEST(Filters, Custom) {
     std::string test_bmp_path{
-        "/home/harunie/Documents/imaging/images/bmp/greenland.bmp"};
+        TEST_DATA_DIR "/bmp/greenland.bmp"};
     Image stop;
     BMPLoader bmp;
     ASSERT_EQ(bmp.load(test_bmp_path, &stop), IMGError::SUCCESS);
@@ -61,29 +67,32 @@ TEST(Filters, Custom) {
     cust_edge_kernel[6] = -1.0f;
     cust_edge_kernel[1] = 0.0f;
     cust_edge_kernel[4] = 0.0f;
-    cust_edge_kernel[6] = 0.0f;
-    cust_edge_kernel[1] = 1.0f;
+    cust_edge_kernel[7] = 0.0f;
+    cust_edge_kernel[2] = 1.0f;
     cust_edge_kernel[5] = 2.0f;
-    cust_edge_kernel[7] = 1.0f;
+    cust_edge_kernel[8] = 1.0f;
     CustomConv edge(cust_edge_kernel, 3, 3);
     Image edge_stop = edge.apply(&stop_grey);
+#ifndef HEADLESS_TESTS
     ImgDisplay::qt(&edge_stop);
+#endif
 }
 
 TEST(Filters, EdgeLarge) {
     std::string test_png_path{
-        "/home/harunie/Documents/imaging/images/png/mountain.png"};
+        TEST_DATA_DIR "/png/mountain.png"};
     Image mountain;
     PNGLoader png;
     ASSERT_EQ(png.load(test_png_path, &mountain), IMGError::SUCCESS);
     Image mountain_grey = GreyscaleOp::op(&mountain);
     Edge edge;
     Image edge_mountain = edge.apply(&mountain_grey);
+#ifndef HEADLESS_TESTS
     ImgDisplay::qt(&edge_mountain);
+#endif
     // RAW took 3338.07ms
     // FFT (with complex) took 6845.97ms
     // FFT (with r2c and c2r) took 1449.96ms
     // FFT w/o plan (with r2c and c2r) took 853.96ms
 }
-
 
