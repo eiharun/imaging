@@ -206,10 +206,10 @@ void Edge::build_kernel() {
     m_kernel[6] = -1.0f;
     m_kernel[1] = 0.0f;
     m_kernel[4] = 0.0f;
-    m_kernel[6] = 0.0f;
-    m_kernel[1] = 1.0f;
+    m_kernel[7] = 0.0f;
+    m_kernel[2] = 1.0f;
     m_kernel[5] = 2.0f;
-    m_kernel[7] = 1.0f;
+    m_kernel[8] = 1.0f;
 }
 
 CustomConv::CustomConv(const std::vector<float> &cust_kernel, int width,

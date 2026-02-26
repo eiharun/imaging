@@ -1,12 +1,15 @@
 #include <algorithm>
 #include <operations.h>
 
+Image GreyscaleOp::apply(const Image *img) { return op(img); }
+
 Image GreyscaleOp::op(const Image *img) {
     Image result;
     result.width = img->width;
     result.height = img->height;
     result.channels = 1;
     result.bitdepth = img->bitdepth;
+    result.type = img->type;
     size_t size = result.width * result.height;
     result.data.resize(size);
 
@@ -32,3 +35,5 @@ Image LumaOp::op(const Image *img, float brightness, float contrast) {
 
     return result;
 }
+
+Image LumaOp::apply(const Image *img) { return op(img); }

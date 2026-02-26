@@ -1,0 +1,5 @@
+unit_tests_autogen/timestamp: \
+	/home/runner/work/imaging/imaging/tests/CMakeLists.txt \
+	/home/runner/work/imaging/imaging/tests/ut_image.cpp \
+	/home/runner/work/imaging/imaging/tests/ut_operations.cpp \
+	/usr/local/bin/cmake
