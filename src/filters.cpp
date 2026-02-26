@@ -222,3 +222,15 @@ CustomConv::CustomConv(const std::vector<float> &cust_kernel, int width,
 }
 
 void CustomConv::build_kernel() {} // empty
+
+void SharpenFilter::build_kernel() {
+    m_k_width = 3;
+    m_k_height = 3;
+    m_k_center_x = m_k_center_y = 1;
+    m_kernel.assign(9, 0.0f);
+    m_kernel[1] = -1.0f;
+    m_kernel[3] = -1.0f;
+    m_kernel[4] =  5.0f;
+    m_kernel[5] = -1.0f;
+    m_kernel[7] = -1.0f;
+}
