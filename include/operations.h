@@ -29,3 +29,15 @@ class LumaOp : public Operation {
 
   private:
 };
+
+enum class FlipAxis { HORIZONTAL, VERTICAL };
+
+class FlipOp : public Operation {
+  public:
+    explicit FlipOp(FlipAxis axis);
+    static Image op(const Image *img, FlipAxis axis);
+    Image apply(const Image *img) override;
+
+  private:
+    FlipAxis m_axis;
+};

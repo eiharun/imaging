@@ -86,4 +86,78 @@ TEST(Filters, EdgeLarge) {
     // FFT w/o plan (with r2c and c2r) took 853.96ms
 }
 
+TEST(Operations, FlipHorizontal) {
+    // 2x2 single-channel image: row0=[0.1, 0.2], row1=[0.3, 0.4]
+    Image img;
+    img.width = 2;
+    img.height = 2;
+    img.channels = 1;
+    img.bitdepth = 8;
+    img.type = StorageType::INTERLEAVED;
+    img.data = {0.1f, 0.2f, 0.3f, 0.4f};
 
+    Image flipped = FlipOp::op(&img, FlipAxis::HORIZONTAL);
+
+    // After horizontal flip: row0=[0.2, 0.1], row1=[0.4, 0.3]
+    EXPECT_FLOAT_EQ(flipped.data[0], 0.2f);
+    EXPECT_FLOAT_EQ(flipped.data[1], 0.1f);
+    EXPECT_FLOAT_EQ(flipped.data[2], 0.4f);
+    EXPECT_FLOAT_EQ(flipped.data[3], 0.3f);
+    EXPECT_EQ(flipped.width, img.width);
+    EXPECT_EQ(flipped.height, img.height);
+    EXPECT_EQ(flipped.channels, img.channels);
+}
+
+TEST(Operations, FlipVertical) {
+    // 2x2 single-channel image: row0=[0.1, 0.2], row1=[0.3, 0.4]
+    Image img;
+    img.width = 2;
+    img.height = 2;
+    img.channels = 1;
+    img.bitdepth = 8;
+    img.type = StorageType::INTERLEAVED;
+    img.data = {0.1f, 0.2f, 0.3f, 0.4f};
+
+    Image flipped = FlipOp::op(&img, FlipAxis::VERTICAL);
+
+    // After vertical flip: row0=[0.3, 0.4], row1=[0.1, 0.2]
+    EXPECT_FLOAT_EQ(flipped.data[0], 0.3f);
+    EXPECT_FLOAT_EQ(flipped.data[1], 0.4f);
+    EXPECT_FLOAT_EQ(flipped.data[2], 0.1f);
+    EXPECT_FLOAT_EQ(flipped.data[3], 0.2f);
+    EXPECT_EQ(flipped.width, img.width);
+    EXPECT_EQ(flipped.height, img.height);
+    EXPECT_EQ(flipped.channels, img.channels);
+}
+
+TEST(Operations, FlipMultiChannel) {
+    // 2x1 RGB image: pixel0=[0.1, 0.2, 0.3], pixel1=[0.4, 0.5, 0.6]
+    Image img;
+    img.width = 2;
+    img.height = 1;
+    img.channels = 3;
+    img.bitdepth = 8;
+    img.type = StorageType::INTERLEAVED;
+    img.data = {0.1f, 0.2f, 0.3f, 0.4f, 0.5f, 0.6f};
+
+    Image flipped = FlipOp::op(&img, FlipAxis::HORIZONTAL);
+
+    // After horizontal flip: pixel0=[0.4, 0.5, 0.6], pixel1=[0.1, 0.2, 0.3]
+    EXPECT_FLOAT_EQ(flipped.data[0], 0.4f);
+    EXPECT_FLOAT_EQ(flipped.data[1], 0.5f);
+    EXPECT_FLOAT_EQ(flipped.data[2], 0.6f);
+    EXPECT_FLOAT_EQ(flipped.data[3], 0.1f);
+    EXPECT_FLOAT_EQ(flipped.data[4], 0.2f);
+    EXPECT_FLOAT_EQ(flipped.data[5], 0.3f);
+}
+
+TEST(Filters, Sharpen) {
+    std::string test_ppm_path{
+        "/home/harunie/Documents/imaging/images/ppm/stop_p6.ppm"};
+    Image stop;
+    PPMLoader ppm;
+    ASSERT_EQ(ppm.load(test_ppm_path, &stop), IMGError::SUCCESS);
+    SharpenFilter sharpen;
+    Image sharp_stop = sharpen.apply(&stop);
+    ImgDisplay::qt(&sharp_stop);
+}

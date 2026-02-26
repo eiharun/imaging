@@ -62,3 +62,11 @@ class CustomConv : public ConvolutionOperation {
       void build_kernel() override;
   private:
 };
+
+class SharpenFilter : public ConvolutionOperation {
+  public:
+  protected:
+    void build_kernel() override;
+
+  private:
+};
